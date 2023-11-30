@@ -1,0 +1,6 @@
+@MoveITMVC_HostAddress = http://localhost:5294
+
+GET {{MoveITMVC_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
