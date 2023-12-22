@@ -8,7 +8,7 @@ namespace MoveITMVC.Models {
 		public OrderStatus Status { get; set; }
 		public decimal TotalPrice { get; set; }
 
-		// Relación con la tabla intermedia OrderProduct
+		// Related to orderproducts table
 		public List<OrderProduct> OrderProducts { get; set; }
 
 		//Shipping Address relation

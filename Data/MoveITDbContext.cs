@@ -8,7 +8,7 @@ namespace MoveITMVC.Models {
 		public DbSet<Order> Orders { get; set; }
 		public DbSet<Address> Addresses { get; set; }
 		public DbSet<ShoppingCart> ShoppingCarts { get; set; }
-		public DbSet<OrderProduct> OrderProducts { get; set; } // DbSet para la tabla intermedia OrderProduct
+		public DbSet<OrderProduct> OrderProducts { get; set; }
 		public DbSet<ShoppingCartProduct> ShoppingCartProducts { get; set; }
 
 		public MoveITDbContext(DbContextOptions<MoveITDbContext> options) : base(options) { }
@@ -23,8 +23,6 @@ namespace MoveITMVC.Models {
 				products.Property(p => p.Price).IsRequired();
 				products.Property(p => p.UrlImg).IsRequired();
 				products.Property(p => p.Description).IsRequired();
-
-				// Relación Product-Order a través de la tabla intermedia (OrderProduct)
 			});
 
 			// Users
@@ -36,21 +34,25 @@ namespace MoveITMVC.Models {
 				users.HasIndex(p => p.Email).IsUnique();
 				users.Property(p => p.Password).IsRequired().HasMaxLength(64);
 
-				// Relación User-Address (uno a muchos)
+				// User Address 1 - n
 				users.HasMany(u => u.Addresses)
 					.WithOne(a => a.User)
 					.HasForeignKey(a => a.UserId)
+					.IsRequired(false)
 					.OnDelete(DeleteBehavior.Cascade);
+				
 
-				// Relación User-Order (uno a muchos)
+				// User Order 1-n
 				users.HasMany(u => u.Orders)
 					.WithOne(o => o.User)
 					.HasForeignKey(o => o.UserId)
+					.IsRequired(false)
 					.OnDelete(DeleteBehavior.Cascade);
 
-				// Relación User-ShoppingCart (uno a uno)
+				// User ShoppingCart 1-1
 				users.HasOne(u => u.ShoppingCart)
 					.WithOne(sc => sc.User)
+					.IsRequired(false)
 					.HasForeignKey<ShoppingCart>(sc => sc.UserId)
 					.OnDelete(DeleteBehavior.Cascade);
 			});
@@ -66,7 +68,7 @@ namespace MoveITMVC.Models {
 				addresses.Property(a => a.Country).IsRequired().HasMaxLength(100);
 				addresses.Property(a => a.IsShippingAddress).IsRequired();
 
-				// Relación Address-User (muchos a uno)
+				// Adress User n-1
 				addresses.HasOne(a => a.User)
 					.WithMany(u => u.Addresses)
 					.HasForeignKey(a => a.UserId)
@@ -81,20 +83,20 @@ namespace MoveITMVC.Models {
 				orders.Property(o => o.Status).IsRequired();
 				orders.Property(o => o.TotalPrice).IsRequired();
 
-				// Relación Order-Product a través de la tabla intermedia (OrderProduct)
+				// Order Product relation through the intermediate table OrderProducts
 				orders.HasMany(o => o.OrderProducts)
 					  .WithOne(op => op.Order)
 					  .HasForeignKey(op => op.OrderId);
 
-				// Relación Order-User (muchos a uno)
+				// Order User n-1
 				modelBuilder.Entity<Order>()
 					.HasOne(o => o.User)
 					.WithMany(u => u.Orders)
 					.HasForeignKey(o => o.UserId)
-					.OnDelete(DeleteBehavior.Restrict); // .restrict al dar error Cascade
-													   //ERROR AT THE END->
+					.OnDelete(DeleteBehavior.Restrict); // .Restrict instead of Cascade
+														//ERROR AT THE END->
 
-				// Relación Order-ShippingAddress (uno a uno)
+				// Order ShippingAddress 1-1
 				orders.HasOne(o => o.ShippingAddress)
 					.WithMany()
 					.HasForeignKey(o => o.ShippingAddressId)
@@ -108,19 +110,19 @@ namespace MoveITMVC.Models {
 				shoppingCart.Property(sc => sc.Created).IsRequired();
 				shoppingCart.Property(sc => sc.TotalPrice).IsRequired();
 
-				// Relación ShoppingCart-User (uno a uno)
+				// ShoppingCart User 1-1
 				shoppingCart.HasOne(sc => sc.User)
 					.WithOne(u => u.ShoppingCart)
 					.HasForeignKey<ShoppingCart>(sc => sc.UserId)
 					.OnDelete(DeleteBehavior.Cascade);
 			});
 
-			// OrderProduct (Tabla intermedia) Establece un id con ambos id
+			// The OrderProduct Id is composed of OrderId and ProductId
 			modelBuilder.Entity<OrderProduct>(orderProducts => {
 				orderProducts.ToTable("OrderProducts");
 				orderProducts.HasKey(op => new { op.OrderId, op.ProductId });
 			});
-			//Relations
+			//The ShoppingCartProduct Id is composed of ShoppingCartId and ProductId
 			modelBuilder.Entity<ShoppingCartProduct>(shoppingCartProducts => {
 				shoppingCartProducts.ToTable("ShoppingCartProducts");
 				shoppingCartProducts.HasKey(scp => new { scp.ShoppingCartId, scp.ProductId });

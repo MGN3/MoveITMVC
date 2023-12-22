@@ -5,6 +5,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MoveITMVC.Models;
 using System.Globalization;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace MoveITMVC {
 	public class Startup {
@@ -15,23 +17,40 @@ namespace MoveITMVC {
 		public IConfiguration Configuration { get; }
 
 		public void ConfigureServices(IServiceCollection services) {
+			var jwtPassword = Configuration.GetValue<string>("AppSettings:passwords:JWT");
+
+
 			services.AddDbContext<MoveITDbContext>(options =>
 				options.UseSqlServer(Configuration.GetConnectionString("cnMoveIT")));
 
 			services.AddCors(options => {
 				options.AddDefaultPolicy(builder => {
 					builder.AllowAnyOrigin()
-						   .AllowAnyMethod() // cualquier método HTTP
+						   .AllowAnyMethod() // Any HTTP Method, change to make it only availeable for HTTPS
 						   .AllowAnyHeader();
 				});
 			});
 
-			// Otros servicios que puedas necesitar
-			services.AddControllers();
-			// ...
+			// Configuración del middleware de autenticación JWT
+			services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+				.AddJwtBearer(options => {
+					options.TokenValidationParameters = new TokenValidationParameters {
+						ValidateIssuer = false,
+						ValidateAudience = false,
+						ValidateLifetime = true,
+						ValidateIssuerSigningKey = true,
+						ValidIssuer = "MoveITMVC",
+						ValidAudience = "project-frontend-developer",
+						IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtPassword)),
+						// more parameteres if needed
+					};
+				});
 
-			// Otras configuraciones
-			// ...
+			// Add other needed services
+			services.AddControllers();
+
+
+			// More configutarions
 		}
 
 		public void Configure(IApplicationBuilder app, IWebHostEnvironment env, MoveITDbContext dbContext) {
@@ -45,20 +64,23 @@ namespace MoveITMVC {
 			app.UseCors();
 			app.UseHttpsRedirection();
 
-			CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-			CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
-
-			// Asegurar la creación de la base de datos antes de configurar el enrutamiento
+			//Make sure DataBase exists before routing config
 			dbContext.Database.EnsureCreated();
 
 			app.UseRouting();
+			app.UseWhen(context =>
+				context.Request.Path.StartsWithSegments("/api/Authenticate"), // MODIFICAR RUTAS A COMPROBAR, añadir un identificador a las que requieran comprobación de JWT?
+				builder => {
+					builder.UseAuthentication();
+				});
+
 			app.UseAuthorization();
 
-			app.UseEndpoints(endpoints =>
-			{
+			app.UseEndpoints(endpoints => {
 				endpoints.MapControllers();
-				// Otros endpoints
+				// More endpoins
 			});
+
 		}
 
 	}

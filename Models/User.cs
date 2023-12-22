@@ -14,10 +14,10 @@ namespace MoveITMVC.Models {
 		public string ProfilePictureUrl { get; set; }
 		public string PhoneNumber { get; set; }
 
-		// Relations*
-		public List<Address> Addresses { get; set; }
-		public List<Order> Orders { get; set; }
-		public ShoppingCart ShoppingCart { get; set; } // Relación 1 a 1
+		// Relations* navigation properties
+		public List<Address>? Addresses { get; set; }
+		public List<Order>? Orders { get; set; }
+		public ShoppingCart? ShoppingCart { get; set; } // Relación 1 a 1
 
 		//Entity framework needs a constructor without parameters
 		public User() {
@@ -29,8 +29,9 @@ namespace MoveITMVC.Models {
 			Email = _email;
 			Password = _password;
 		}
-	}
 
+
+	}
 
 	public enum Gender {
 		Male,
@@ -39,3 +40,23 @@ namespace MoveITMVC.Models {
 		NonSpecified
 	}
 }
+
+
+
+/*
+ User newUser = new User {
+    // Otros campos
+    Addresses = new List<Address>(),
+    Orders = new List<Order>(),
+    ShoppingCart = new ShoppingCart()
+};
+
+// Lógica para crear y agregar un nuevo pedido
+Order newOrder = new Order();
+// Asociar el pedido al usuario
+newUser.Orders.Add(newOrder);
+
+// Guardar el usuario en la base de datos (Entity Framework)
+dbContext.Users.Add(newUser);
+dbContext.SaveChanges();
+ */

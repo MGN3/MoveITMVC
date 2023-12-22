@@ -11,7 +11,8 @@ namespace NombreDeTuProyecto {
 		public static IHostBuilder CreateHostBuilder(string[] args) =>
 			Host.CreateDefaultBuilder(args)
 				.ConfigureWebHostDefaults(webBuilder => {
-					webBuilder.UseStartup<Startup>(); // Usa tu clase Startup personalizada
+					webBuilder.UseStartup<Startup>(); // Customized startup class
+					webBuilder.UseUrls("https://localhost:7202"); //To avoid http profile as default.
 				});
 	}
 }
