@@ -198,9 +198,34 @@ namespace MoveITMVC.Controllers {
 
 			// generate and send JWT
 			var token = JwtGenerator(userAuthenticating);
-
+			//send only as ok(token)?
 			return Ok(new { Token = token });
 		}
+
+		[HttpGet("UserInfo")]
+		[Authorize] // Añade [Authorize] para requerir autenticación mediante JWT
+		public IActionResult GetUserInfo() {
+			try {
+				var userClaims = HttpContext.User.Claims; // Obtén las claims del usuario autenticado
+
+				// Aquí puedes acceder a las claims del usuario, por ejemplo:
+				var userId = userClaims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+				var userEmail = userClaims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+
+				// Con la información obtenida del token, puedes realizar consultas en la base de datos, por ejemplo:
+				// TODO: Realizar consulta en la base de datos usando userId o userEmail para obtener más información del usuario
+
+				// Supongamos que obtienes datos del usuario de la base de datos
+				var userFromDb = new { UserId = userId, Email = userEmail, OtherInfo = "Some data from DB" };
+
+				// Devuelve los datos del usuario
+				return Ok(userFromDb);
+			} catch (Exception ex) {
+				// Manejo de errores
+				return StatusCode(500, "Error interno del servidor");
+			}
+		}
+
 
 		[HttpGet("datos")]
 		[Authorize] // Asegura que solo los usuarios autenticados puedan acceder a este endpoint
@@ -248,7 +273,7 @@ namespace MoveITMVC.Controllers {
 		}
 
 		private string JwtGenerator(User user) {
-			var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetValue<string>("AppSettings:passwords:JWT")));
+			var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetSection("Secrets").GetSection("JWT").Value));
 			var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
 			//Array of claims to add into the token

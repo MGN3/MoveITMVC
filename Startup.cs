@@ -7,6 +7,7 @@ using MoveITMVC.Models;
 using System.Globalization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Configuration;
 
 namespace MoveITMVC {
 	public class Startup {
@@ -17,8 +18,7 @@ namespace MoveITMVC {
 		public IConfiguration Configuration { get; }
 
 		public void ConfigureServices(IServiceCollection services) {
-			var jwtPassword = Configuration.GetValue<string>("AppSettings:passwords:JWT");
-
+			var jwtPassword = Configuration.GetSection("Secrets").GetSection("JWT").Value;
 
 			services.AddDbContext<MoveITDbContext>(options =>
 				options.UseSqlServer(Configuration.GetConnectionString("cnMoveIT")));
@@ -69,7 +69,7 @@ namespace MoveITMVC {
 
 			app.UseRouting();
 			app.UseWhen(context =>
-				context.Request.Path.StartsWithSegments("/api/Authenticate"), // MODIFICAR RUTAS A COMPROBAR, añadir un identificador a las que requieran comprobación de JWT?
+				context.Request.Path.StartsWithSegments("/api/Auth"), // MODIFICAR RUTAS A COMPROBAR, añadir un identificador a las que requieran comprobación de JWT?
 				builder => {
 					builder.UseAuthentication();
 				});
