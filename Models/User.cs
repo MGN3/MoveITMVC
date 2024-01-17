@@ -30,6 +30,14 @@ namespace MoveITMVC.Models {
 			Password = _password;
 		}
 
+		public User(string _name, string _email, string _nickName, Gender _gender, string _profilePictureUrl, string _phoneNumber) {
+			Name = _name;
+			Email = _email;
+			Nickname = _nickName;
+			Gender = _gender;
+			ProfilePictureUrl = _profilePictureUrl;
+			PhoneNumber = _phoneNumber;
+		}
 
 	}
 

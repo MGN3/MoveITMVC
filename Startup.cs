@@ -68,12 +68,18 @@ namespace MoveITMVC {
 			dbContext.Database.EnsureCreated();
 
 			app.UseRouting();
+
+			//KEY code. The authentication applies only WHEN:
+			//Check again if the condition really applies even if the endoint in the controller doesn't include [Authorize]
 			app.UseWhen(context =>
-				context.Request.Path.StartsWithSegments("/api/Auth"), // MODIFICAR RUTAS A COMPROBAR, añadir un identificador a las que requieran comprobación de JWT?
+				context.Request.Path.StartsWithSegments("/Auth"), //This applies after basic route api/controller.
 				builder => {
-					builder.UseAuthentication();
+					app.UseAuthentication();
+					app.UseAuthorization();
 				});
 
+			//Why both are required? Which one is the JWT validation?
+			app.UseAuthentication(); //This line was not present originally, so I couldn't properly authenticate
 			app.UseAuthorization();
 
 			app.UseEndpoints(endpoints => {
