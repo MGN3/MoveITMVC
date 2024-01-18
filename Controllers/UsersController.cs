@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -15,6 +16,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MoveITMVC.Models;
+using Newtonsoft.Json.Linq;
 
 namespace MoveITMVC.Controllers {
 	[Route("api/[controller]")]
@@ -56,26 +58,11 @@ namespace MoveITMVC.Controllers {
 			return myAccountUser;
 		}
 
-		///[HttpGet("{id}")]
-		//public async Task<IActionResult> GetUserHtml(Guid id) {
-		//	var user = await _context.Users.FindAsync(id);
-
-		//	if (user == null) {
-		//		return NotFound();
-		//	}
-
-		//	string htmlContent = $"<h3>User details:</h3>" +
-		//						 $"<p>Name: {user.Name}</p>" +
-		//						 $"<p>Nombre: {user.Nickname}</p>";
-
-		//	return Content(htmlContent, "text/html");
-		//}
-
 		// PUT: 
 		// To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
 		[HttpPut("{id}")]
 		[Authorize]
-		public async Task<IActionResult> PutUser(Guid idFromJWT, User userFromClient) {
+		public async Task<IActionResult> PutUser1(Guid idFromJWT, User userFromClient) {
 			try {
 				var existingUser = await _context.Users.FindAsync(idFromJWT);
 
@@ -114,7 +101,7 @@ namespace MoveITMVC.Controllers {
 		//, [FromHeader(Name = "Authorization")] string jwtToken)
 		[HttpPut("Auth/Put")]
 		[Authorize]
-		public async Task<IActionResult> PutUser([FromBody] User userFromClient) {
+		public async Task<IActionResult> PutUser2([FromBody] User userFromClient) {
 			try {
 				var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
 				// Extract Id from JWT
@@ -156,40 +143,104 @@ namespace MoveITMVC.Controllers {
 			}
 		}
 
-		/*COMO PUEDO TENER VARIOS ENDPOINTS PARA UNA MISMA ACCION?, COMO AÑADIRLE RUTA?=*/
-		// POST: api/Users
-		// To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-		//[HttpPost]
-		//public async Task<ActionResult<User>> PostUser(User user) {
-		//	_context.Users.Add(user);
-		//	await _context.SaveChangesAsync();
+		[HttpPut("Auth1/${id}")]
+		public async Task<IActionResult> PutName(Guid userId, [FromBody] string newUserName) {
 
-		//	return CreatedAtAction("GetUser", new { id = user.UserId }, user);
-		//}
 
-		//[HttpPost]
-		//public async Task<ActionResult<User>> PostUser2([FromBody] User user) {
-		//	string connectionString = _configuration.GetConnectionString("cnMoveIT");
+			return Ok();
+		}
 
-		//	using (SqlConnection connection = new SqlConnection(connectionString)) {
-		//		string query = "INSERT INTO Users (UserId, Name, Email, Password, Nickname, Gender, ProfilePictureUrl, PhoneNumber) VALUES (@UserId, @Name, @Email, @Password, @Nickname, @Gender, @ProfilePictureUrl, @PhoneNumber)";
+		/*//////////////////////////////////////////*/
+		[HttpPut("Auth/Update/{id}")]
+		[Authorize]
+		public async Task<IActionResult> UpdateUser(Guid id) {
+			if (!UserExists(id)) {
+				return NotFound();
+			}
 
-		//		SqlCommand command = new SqlCommand(query, connection);
-		//		command.Parameters.AddWithValue("@UserId", Guid.NewGuid());
-		//		command.Parameters.AddWithValue("@Name", user.Name);
-		//		command.Parameters.AddWithValue("@Email", user.Email);
-		//		command.Parameters.AddWithValue("@Password", user.Password);
-		//		command.Parameters.AddWithValue("@Nickname", user.Nickname);
-		//		command.Parameters.AddWithValue("@Gender", user.Gender);
-		//		command.Parameters.AddWithValue("@ProfilePictureUrl", user.ProfilePictureUrl);
-		//		command.Parameters.AddWithValue("@PhoneNumber", user.PhoneNumber);
+			var existingUser = await _context.Users.FindAsync(id);
 
-		//		await connection.OpenAsync();
-		//		await command.ExecuteNonQueryAsync();
+			if (existingUser == null) {
+				return NotFound();
+			}
+
+			using (var reader = new StreamReader(Request.Body)) {
+				var requestBody = await reader.ReadToEndAsync();
+
+				// Deserializar el JSON  JsonDocument
+				using (JsonDocument document = JsonDocument.Parse(requestBody)) {
+					if (document.RootElement.TryGetProperty("name", out var newName) && newName.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(newName.GetString())) {
+						existingUser.Name = newName.GetString();
+					}
+
+					if (document.RootElement.TryGetProperty("email", out var correoElement) && correoElement.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(correoElement.GetString())) {
+						existingUser.Email = correoElement.GetString();
+					}
+
+					if (document.RootElement.TryGetProperty("nickname", out var nicknameElement) && nicknameElement.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(nicknameElement.GetString())) {
+						existingUser.Nickname = nicknameElement.GetString();
+					}
+
+					//One of the most complex ifs I have ever written... -.-
+					if (document.RootElement.TryGetProperty("gender", out var genderElement) && genderElement.ValueKind == JsonValueKind.String && Enum.TryParse<Gender>(genderElement.GetString(), out var gender)) {
+						existingUser.Gender = gender;
+					}
+
+					if (document.RootElement.TryGetProperty("profilePictureUrl", out var profilePictureUrlElement) && profilePictureUrlElement.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(profilePictureUrlElement.GetString())) {
+						existingUser.ProfilePictureUrl = profilePictureUrlElement.GetString();
+					}
+
+					if (document.RootElement.TryGetProperty("phoneNumber", out var phoneNumberElement) && phoneNumberElement.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(phoneNumberElement.GetString())) {
+						existingUser.PhoneNumber = phoneNumberElement.GetString();
+					}
+
+					// Add or remove 
+
+					try {
+						await _context.SaveChangesAsync();
+					} catch (DbUpdateConcurrencyException) {
+						// Add concurrency errors here
+					}
+				}
+			}
+
+			return NoContent();
+		}
+
+		//[HttpPut("Auth/Update/{id}")]
+		//[Authorize]
+		//public async Task<IActionResult> UpdateUser(Guid id, [FromBody] JObject modifiedUser) {
+		//	if (modifiedUser == null) {
+		//		return BadRequest();
 		//	}
 
-		//	return user;
+		//	var existingUser = await _context.Users.FindAsync(id);
+
+		//	if (existingUser == null) {
+		//		return NotFound();
+		//	}
+
+		//	existingUser.Name = modifiedUser["name"]?.ToString() ?? existingUser.Name;
+		//	existingUser.Email = modifiedUser["email"]?.ToString() ?? existingUser.Email;
+		//	existingUser.Password = modifiedUser["password"]?.ToString() ?? existingUser.Password;
+		//	existingUser.Nickname = modifiedUser["nickname"]?.ToString() ?? existingUser.Nickname;
+		//	existingUser.ProfilePictureUrl = modifiedUser["profilePictureUrl"]?.ToString() ?? existingUser.ProfilePictureUrl;
+		//	existingUser.PhoneNumber = modifiedUser["phoneNumber"]?.ToString() ?? existingUser.PhoneNumber;
+
+		//	try {
+		//		await _context.SaveChangesAsync();
+		//	} catch (DbUpdateConcurrencyException) {
+		//		if (!UserExists(id)) {
+		//			return NotFound();
+		//		} else {
+		//			throw;
+		//		}
+		//	}
+
+		//	return NoContent();
 		//}
+
+
 
 		// DELETE: api/Users/5
 		[HttpDelete("{id}")]
@@ -425,6 +476,59 @@ namespace MoveITMVC.Controllers {
 		//	} catch (Exception ex) {
 		//		return null;
 		//	}
+		//}
+
+
+
+		///[HttpGet("{id}")]
+		//public async Task<IActionResult> GetUserHtml(Guid id) {
+		//	var user = await _context.Users.FindAsync(id);
+
+		//	if (user == null) {
+		//		return NotFound();
+		//	}
+
+		//	string htmlContent = $"<h3>User details:</h3>" +
+		//						 $"<p>Name: {user.Name}</p>" +
+		//						 $"<p>Nombre: {user.Nickname}</p>";
+
+		//	return Content(htmlContent, "text/html");
+		//}
+
+
+		/*COMO PUEDO TENER VARIOS ENDPOINTS PARA UNA MISMA ACCION?, COMO AÑADIRLE RUTA?=*/
+		// POST: api/Users
+		// To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+		//[HttpPost]
+		//public async Task<ActionResult<User>> PostUser(User user) {
+		//	_context.Users.Add(user);
+		//	await _context.SaveChangesAsync();
+
+		//	return CreatedAtAction("GetUser", new { id = user.UserId }, user);
+		//}
+
+		//[HttpPost]
+		//public async Task<ActionResult<User>> PostUser2([FromBody] User user) {
+		//	string connectionString = _configuration.GetConnectionString("cnMoveIT");
+
+		//	using (SqlConnection connection = new SqlConnection(connectionString)) {
+		//		string query = "INSERT INTO Users (UserId, Name, Email, Password, Nickname, Gender, ProfilePictureUrl, PhoneNumber) VALUES (@UserId, @Name, @Email, @Password, @Nickname, @Gender, @ProfilePictureUrl, @PhoneNumber)";
+
+		//		SqlCommand command = new SqlCommand(query, connection);
+		//		command.Parameters.AddWithValue("@UserId", Guid.NewGuid());
+		//		command.Parameters.AddWithValue("@Name", user.Name);
+		//		command.Parameters.AddWithValue("@Email", user.Email);
+		//		command.Parameters.AddWithValue("@Password", user.Password);
+		//		command.Parameters.AddWithValue("@Nickname", user.Nickname);
+		//		command.Parameters.AddWithValue("@Gender", user.Gender);
+		//		command.Parameters.AddWithValue("@ProfilePictureUrl", user.ProfilePictureUrl);
+		//		command.Parameters.AddWithValue("@PhoneNumber", user.PhoneNumber);
+
+		//		await connection.OpenAsync();
+		//		await command.ExecuteNonQueryAsync();
+		//	}
+
+		//	return user;
 		//}
 
 	}
