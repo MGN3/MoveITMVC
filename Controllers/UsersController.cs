@@ -60,186 +60,61 @@ namespace MoveITMVC.Controllers {
 
 		// PUT: 
 		// To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-		[HttpPut("{id}")]
-		[Authorize]
-		public async Task<IActionResult> PutUser1(Guid idFromJWT, User userFromClient) {
-			try {
-				var existingUser = await _context.Users.FindAsync(idFromJWT);
 
-				//Is the id the same? Is the email already in use?
-				if (idFromJWT != userFromClient.UserId) { // IS THIS REALLY USEFUL?
-					return BadRequest();
-				} else if (!EmailExists(userFromClient.Email)) {
-					return BadRequest("Email already exists");
-				}
-
-				// Encypting new user password
-				string hashedPassword = HashPassword(userFromClient.Password);
-
-				// Actualizar propiedades del usuario existente
-				existingUser.Name = userFromClient.Name;
-				existingUser.Email = userFromClient.Email;
-				existingUser.Password = hashedPassword; // Encrypted password
-				existingUser.Nickname = userFromClient.Nickname;
-				existingUser.Gender = userFromClient.Gender;
-				existingUser.ProfilePictureUrl = userFromClient.ProfilePictureUrl;
-				existingUser.PhoneNumber = userFromClient.PhoneNumber;
-
-				// Updating database
-				_context.Users.Update(existingUser);
-				// Saving changes
-				await _context.SaveChangesAsync();
-
-				return Ok("User modified successfully");
-			} catch (Exception ex) {
-				// Manage exceptions
-				return StatusCode(500, "Error trying to modify user data");
-			}
-		}
-
-		//Add this to parameters or get token from the code inside function?:
-		//, [FromHeader(Name = "Authorization")] string jwtToken)
-		[HttpPut("Auth/Put")]
-		[Authorize]
-		public async Task<IActionResult> PutUser2([FromBody] User userFromClient) {
-			try {
-				var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-				// Extract Id from JWT
-				var idFromJWT = ExtractUserIdFromToken(token); // Extract id from JWT
-
-				// ES REALMENTE NECESARIO? SI LOS ENVIO YO MISMO EN EL CLIENTE NO? Podría usarse otro token pero sin firma adecuada? Creo que esto ya lo hace Authorize
-				if (idFromJWT != userFromClient.UserId) {
-					// guid from JWT stored in client is not the same as the GUID from the database for 
-					return Unauthorized(); // 401 Unauthorized
-				}
-
-				// Obtener el usuario existente de la base de datos
-				var existingUser = await _context.Users.FindAsync(idFromJWT);
-
-				if (existingUser == null) {
-					return NotFound("User not found");
-				}
-
-				// Encryptar la nueva contraseña del usuario
-				string hashedPassword = HashPassword(userFromClient.Password);
-
-				// Actualizar propiedades del usuario existente
-				existingUser.Name = userFromClient.Name;
-				existingUser.Email = userFromClient.Email;
-				existingUser.Password = hashedPassword; // Contraseña encriptada
-				existingUser.Nickname = userFromClient.Nickname;
-				existingUser.Gender = userFromClient.Gender;
-				existingUser.ProfilePictureUrl = userFromClient.ProfilePictureUrl;
-				existingUser.PhoneNumber = userFromClient.PhoneNumber;
-
-				// Actualizar en la base de datos
-				_context.Users.Update(existingUser);
-				await _context.SaveChangesAsync();
-
-				return Ok("User modified successfully");
-			} catch (Exception ex) {
-				// Manejar excepciones
-				return StatusCode(500, ex.Message);
-			}
-		}
-
-		[HttpPut("Auth1/${id}")]
-		public async Task<IActionResult> PutName(Guid userId, [FromBody] string newUserName) {
-
-
-			return Ok();
-		}
-
-		/*//////////////////////////////////////////*/
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="id"></param>
+		/// <returns></returns>
 		[HttpPut("Auth/Update/{id}")]
 		[Authorize]
 		public async Task<IActionResult> UpdateUser(Guid id) {
-			if (!UserExists(id)) {
-				return NotFound();
-			}
+			try {
+				var existingUser = await _context.Users.FindAsync(id);
 
-			var existingUser = await _context.Users.FindAsync(id);
-
-			if (existingUser == null) {
-				return NotFound();
-			}
-
-			using (var reader = new StreamReader(Request.Body)) {
-				var requestBody = await reader.ReadToEndAsync();
-
-				// Deserializar el JSON  JsonDocument
-				using (JsonDocument document = JsonDocument.Parse(requestBody)) {
-					if (document.RootElement.TryGetProperty("name", out var newName) && newName.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(newName.GetString())) {
-						existingUser.Name = newName.GetString();
-					}
-
-					if (document.RootElement.TryGetProperty("email", out var correoElement) && correoElement.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(correoElement.GetString())) {
-						existingUser.Email = correoElement.GetString();
-					}
-
-					if (document.RootElement.TryGetProperty("nickname", out var nicknameElement) && nicknameElement.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(nicknameElement.GetString())) {
-						existingUser.Nickname = nicknameElement.GetString();
-					}
-
-					//One of the most complex ifs I have ever written... -.-
-					if (document.RootElement.TryGetProperty("gender", out var genderElement) && genderElement.ValueKind == JsonValueKind.String && Enum.TryParse<Gender>(genderElement.GetString(), out var gender)) {
-						existingUser.Gender = gender;
-					}
-
-					if (document.RootElement.TryGetProperty("profilePictureUrl", out var profilePictureUrlElement) && profilePictureUrlElement.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(profilePictureUrlElement.GetString())) {
-						existingUser.ProfilePictureUrl = profilePictureUrlElement.GetString();
-					}
-
-					if (document.RootElement.TryGetProperty("phoneNumber", out var phoneNumberElement) && phoneNumberElement.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(phoneNumberElement.GetString())) {
-						existingUser.PhoneNumber = phoneNumberElement.GetString();
-					}
-
-					// Add or remove 
-
-					try {
-						await _context.SaveChangesAsync();
-					} catch (DbUpdateConcurrencyException) {
-						// Add concurrency errors here
-					}
+				if (existingUser == null) {
+					return NotFound();
 				}
-			}
 
-			return NoContent();
+				using (var reader = new StreamReader(Request.Body)) {
+					var requestBody = await reader.ReadToEndAsync();
+
+					// Deserialize JSON
+					using JsonDocument document = JsonDocument.Parse(requestBody);
+
+					UpdatePropertyIfExists(document, "name", value => existingUser.Name = value);
+					UpdatePropertyIfExists(document, "email", value => existingUser.Email = value);
+					UpdatePropertyIfExists(document, "nickname", value => existingUser.Nickname = value);
+
+					// Extra logic for gender Enum
+					UpdatePropertyIfExists(document, "gender", value => {
+						if (Enum.TryParse<Gender>(value, out var gender)) {
+							existingUser.Gender = gender;
+						}
+					});
+
+					UpdatePropertyIfExists(document, "profilePictureUrl", value => existingUser.ProfilePictureUrl = value);
+					UpdatePropertyIfExists(document, "phoneNumber", value => existingUser.PhoneNumber = value);
+
+					await _context.SaveChangesAsync();
+				}
+
+				return NoContent();
+
+			} catch (JsonException) {
+				return BadRequest("Invalid JSON format");
+			} catch (DbUpdateConcurrencyException) {
+				return StatusCode(500, "Concurrency issue occurred");
+			} catch (Exception ex) {
+				return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
+			}
 		}
 
-		//[HttpPut("Auth/Update/{id}")]
-		//[Authorize]
-		//public async Task<IActionResult> UpdateUser(Guid id, [FromBody] JObject modifiedUser) {
-		//	if (modifiedUser == null) {
-		//		return BadRequest();
-		//	}
-
-		//	var existingUser = await _context.Users.FindAsync(id);
-
-		//	if (existingUser == null) {
-		//		return NotFound();
-		//	}
-
-		//	existingUser.Name = modifiedUser["name"]?.ToString() ?? existingUser.Name;
-		//	existingUser.Email = modifiedUser["email"]?.ToString() ?? existingUser.Email;
-		//	existingUser.Password = modifiedUser["password"]?.ToString() ?? existingUser.Password;
-		//	existingUser.Nickname = modifiedUser["nickname"]?.ToString() ?? existingUser.Nickname;
-		//	existingUser.ProfilePictureUrl = modifiedUser["profilePictureUrl"]?.ToString() ?? existingUser.ProfilePictureUrl;
-		//	existingUser.PhoneNumber = modifiedUser["phoneNumber"]?.ToString() ?? existingUser.PhoneNumber;
-
-		//	try {
-		//		await _context.SaveChangesAsync();
-		//	} catch (DbUpdateConcurrencyException) {
-		//		if (!UserExists(id)) {
-		//			return NotFound();
-		//		} else {
-		//			throw;
-		//		}
-		//	}
-
-		//	return NoContent();
-		//}
-
+		private void UpdatePropertyIfExists(JsonDocument document, string propertyName, Action<string> updateAction) {
+			if (document.RootElement.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(property.GetString())) {
+				updateAction(property.GetString());
+			}
+		}
 
 
 		// DELETE: api/Users/5
