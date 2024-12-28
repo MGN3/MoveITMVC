@@ -127,9 +127,6 @@ namespace MoveITMVC.Models {
 				shoppingCartProducts.ToTable("ShoppingCartProducts");
 				shoppingCartProducts.HasKey(scp => new { scp.ShoppingCartId, scp.ProductId });
 			});
-
-
-
 		}
 	}
 }

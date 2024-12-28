@@ -58,6 +58,23 @@ namespace MoveITMVC.Controllers {
 			return myAccountUser;
 		}
 
+		[HttpPost("NameAvailable")]
+		public async Task<IActionResult> NameAvailable([FromBody] JsonElement jsonElement) {
+			string name = jsonElement.GetProperty("name").GetString().ToLower(); // Convertimos el nombre a minúsculas
+			var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Name.ToLower() == name);
+			bool nameAvailable = existingUser == null;
+			return Ok(new { nameAvailable });
+		}
+
+		[HttpPost("EmailAvailable")]
+		public async Task<IActionResult> EmailAvailable([FromBody] JsonElement jsonElement) {
+			string email = jsonElement.GetProperty("email").GetString().ToLower();
+			var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email);
+			bool emailAvailable = existingUser == null;
+			return Ok(new { emailAvailable });
+		}
+
+
 		// PUT: 
 		// To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
 
