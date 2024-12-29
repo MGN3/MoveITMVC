@@ -31,7 +31,7 @@ namespace MoveITMVC {
 				});
 			});
 
-			// Configuración del middleware de autenticación JWT
+			// Middleware configuration for JWT
 			services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 				.AddJwtBearer(options => {
 					options.TokenValidationParameters = new TokenValidationParameters {
@@ -45,12 +45,9 @@ namespace MoveITMVC {
 						// more parameteres if needed
 					};
 				});
-
 			// Add other needed services
 			services.AddControllers();
-
-
-			// More configutarions
+			// More configs
 		}
 
 		public void Configure(IApplicationBuilder app, IWebHostEnvironment env, MoveITDbContext dbContext) {

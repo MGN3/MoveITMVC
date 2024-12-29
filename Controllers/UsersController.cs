@@ -60,16 +60,16 @@ namespace MoveITMVC.Controllers {
 
 		[HttpPost("NameAvailable")]
 		public async Task<IActionResult> NameAvailable([FromBody] JsonElement jsonElement) {
-			string name = jsonElement.GetProperty("name").GetString().ToLower(); // Convertimos el nombre a minúsculas
-			var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Name.ToLower() == name);
+			string nameFromClient = jsonElement.GetProperty("name").GetString().ToLower(); // Convert name to lower case
+			var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Name.ToLower() == nameFromClient);
 			bool nameAvailable = existingUser == null;
 			return Ok(new { nameAvailable });
 		}
 
 		[HttpPost("EmailAvailable")]
 		public async Task<IActionResult> EmailAvailable([FromBody] JsonElement jsonElement) {
-			string email = jsonElement.GetProperty("email").GetString().ToLower();
-			var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email);
+			string emailFromClient = jsonElement.GetProperty("email").GetString().ToLower();
+			var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == emailFromClient);
 			bool emailAvailable = existingUser == null;
 			return Ok(new { emailAvailable });
 		}
@@ -221,30 +221,24 @@ namespace MoveITMVC.Controllers {
 		public async Task<IActionResult> Authenticate([FromBody] ClientCredentials credentials) {
 			string emailClientInput = credentials.Email; //Upper case vs lower case in client js object?? check consistency
 			string passwordClientInput = credentials.Password;
-
 			// Checking inputs. Add more logic or use an auxiliar function.
 			if (string.IsNullOrEmpty(emailClientInput) || string.IsNullOrEmpty(passwordClientInput)) {
 				return BadRequest("Invalid username or password");
 			}
-
 			// If input ok, find email.
 			User userAuthenticating = await _context.Users.FirstOrDefaultAsync(u => u.Email == emailClientInput);
-
 			// User doesn't exist:
 			if (userAuthenticating == null) {
 				return NotFound("Email not registered");
 			}
-
 			// User exists -> Hash input password before comparing it with the hashed stored password for the given Email
 			string hashedPasswordEntered = HashPassword(passwordClientInput);
 
 			if (hashedPasswordEntered != userAuthenticating.Password) {
 				return Unauthorized("Wrong password");
 			}
-
 			// If comparison is ok, generate a new token with User object.
 			var token = JwtGenerator(userAuthenticating);
-			//send only as ok(token)? CHECK THIS to make it better looking.
 			return Ok(new { Token = token });
 		}
 
